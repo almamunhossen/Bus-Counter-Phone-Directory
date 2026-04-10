@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bus Counter Directory</title>
+  
+  <!-- PWA -->
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#16a34a" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#0f172a" media="(prefers-color-scheme: dark)">
+  <meta name="description" content="বাংলাদেশের বাস কাউন্টারের ফোন নাম্বার ডিরেক্টরি">
+  <link rel="icon" href="favicon.ico">
+  
+  <!-- Styles -->
+  <link rel="stylesheet" href="style.css">
+  
+  <!-- OpenStreetMap (Leaflet) -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  
+  <!-- Font Awesome for icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+
+<div class="top-controls">
+  <button id="darkBtn" class="icon-btn" title="ডার্ক মোড">
+    <i class="fas fa-moon"></i>
+  </button>
+  <button id="shareBtn" class="icon-btn" title="শেয়ার করুন">
+    <i class="fas fa-share-alt"></i>
+  </button>
+  <button id="feedbackBtn" class="icon-btn" title="ফিডব্যাক">
+    <i class="fas fa-comment-dots"></i>
+  </button>
+</div>
+
+<div class="app">
+  <header>
+    <h1><i class="fas fa-bus"></i> Bus Counter Phone Directory</h1>
+    <div class="last-update">
+      <i class="fas fa-sync-alt"></i> সর্বশেষ আপডেট: <span id="updateDate">২০২৪-০১-১৫</span>
+    </div>
+  </header>
+
+  <!-- Search & Filters -->
+  <div class="controls-container">
+    <div class="filters">
+      <div class="select-wrapper">
+        <i class="fas fa-bus"></i>
+        <select id="busSelect">
+          <option value="">সব বাস কোম্পানি</option>
+        </select>
+      </div>
+      
+      <div class="select-wrapper">
+        <i class="fas fa-map-marker-alt"></i>
+        <select id="counterSelect">
+          <option value="">সব কাউন্টার</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="search-wrapper">
+      <i class="fas fa-search"></i>
+      <input
+        id="search"
+        type="text"
+        placeholder="খুঁজুন: বাস / কাউন্টার / ফোন নাম্বার"
+        autocomplete="off"
+      >
+    </div>
+  </div>
+
+  <!-- Meta info & Actions -->
+  <div class="meta">
+    <span id="resultCount">সব কাউন্টার দেখানো হচ্ছে</span>
+    <div class="action-buttons">
+      <button id="clearBtn" class="action-btn">
+        <i class="fas fa-times"></i> Clear
+      </button>
+      <button id="favFilterBtn" class="action-btn">
+        <i class="fas fa-star"></i> ফেভারিট
+      </button>
+      <button id="callAllBtn" class="action-btn call-btn">
+        <i class="fas fa-phone"></i> সকল কল
+      </button>
+    </div>
+  </div>
+
+  <!-- Map -->
+  <div class="map-container">
+    <div id="map"></div>
+    <div class="map-controls">
+      <button id="locateBtn" class="map-btn" title="আমার অবস্থান">
+        <i class="fas fa-location-crosshairs"></i>
+      </button>
+      <button id="refreshMapBtn" class="map-btn" title="ম্যাপ রিফ্রেশ">
+        <i class="fas fa-redo"></i>
+      </button>
+    </div>
+  </div>
+
+  <!-- Results -->
+  <div id="list"></div>
+
+  <!-- Offline Status -->
+  <div id="offlineStatus" class="offline-alert">
+    <i class="fas fa-wifi-slash"></i> আপনি অফলাইনে আছেন
+  </div>
+</div>
+
+<!-- Feedback Modal -->
+<div id="feedbackModal" class="modal">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h3><i class="fas fa-comment-dots"></i> ফিডব্যাক দিন</h3>
+      <button class="close-btn">&times;</button>
+    </div>
+    <div class="modal-body">
+      <form id="feedbackForm">
+        <div class="form-group">
+          <label for="name">আপনার নাম (ঐচ্ছিক)</label>
+          <input type="text" id="name" placeholder="আপনার নাম">
+        </div>
+        
+        <div class="form-group">
+          <label for="email">ইমেইল (ঐচ্ছিক)</label>
+          <input type="email" id="email" placeholder="আপনার ইমেইল">
+        </div>
+        
+        <div class="form-group">
+          <label for="feedbackType">ফিডব্যাক টাইপ</label>
+          <select id="feedbackType">
+            <option value="suggestion">সাজেশন</option>
+            <option value="bug">বাগ রিপোর্ট</option>
+            <option value="missing">মিসিং তথ্য</option>
+            <option value="other">অন্যান্য</option>
+          </select>
+        </div>
+        
+        <div class="form-group">
+          <label for="message">আপনার মেসেজ *</label>
+          <textarea id="message" rows="4" placeholder="আপনার ফিডব্যাক এখানে লিখুন..." required></textarea>
+        </div>
+        
+        <div class="form-group">
+          <label for="busSelectFeedback">সম্পর্কিত বাস (ঐচ্ছিক)</label>
+          <select id="busSelectFeedback">
+            <option value="">বাস নির্বাচন করুন</option>
+          </select>
+        </div>
+        
+        <button type="submit" class="submit-btn">
+          <i class="fas fa-paper-plane"></i> পাঠান
+        </button>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Call Options Modal -->
+<div id="callOptionsModal" class="modal">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h3><i class="fas fa-phone"></i> কল করুন</h3>
+      <button class="close-btn">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div class="call-options" id="callOptionsList"></div>
+    </div>
+  </div>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>
